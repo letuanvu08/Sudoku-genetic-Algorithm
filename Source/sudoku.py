@@ -20,7 +20,7 @@ class Generate_board:
         self.Fix_board = []
         self.generate_board_Puzzle()
         # print("Goal board:")
-        self.displayBoard(Generate_board._goalBoard)
+        # self.displayBoard(Generate_board._goalBoard)
         # print("Puzzle board:")
         # self.displayBoard(self.board_Puzzle)
 
@@ -101,69 +101,99 @@ class Candidate:
         self.size = len(self.board)
         self.random_gen()
         self.fitness = self.update_fitness()
-        
 
     def mutate(self):
-        success = False
-        while(not success):
+        
+        while(True):
             row = randint(0, self.size-1)
+            col = randint(0, self.size-1)
+            if(self.calculate_num_occurrences_row(row) < self.size):
+                number = randint(1, self.size)
+                list_dup=self.get_row_duplicate(row)
+                col=choice(list_dup)
+                while(self.is_row_duplicate(row, number) and self.Fixed_board[row][col] != 0):
+                    number = number % self.size+1
+                    col = (col+1)%self.size
+                self.board[row][col] = number
+                break
+            if (self.calculate_num_occurrences_col(col) < self.size):
+                number = randint(1, self.size)
+                while(self.is_column_duplicate(row,col,-1, number) and self.Fixed_board[row][col] != 0):
+                    number = number % self.size+1
+                    row = randint(0, self.size-1)
+                self.board[row][col] = number
+                break
             points = sample(range(self.size), 2)
-            if(not self.is_duplicate(row, points[0], self.board[row][points[1]])
-               and not self.is_duplicate(row, points[1], self.board[row][points[0]])):
-               temp=self.board[row][points[1]]
-               self.board[row][points[1]]=self.board[row][points[0]]
-               self.board[row][points[0]]=temp
-               success=True
+        
+            if(self.Fixed_board[row][points[0]] == 0
+               and self.Fixed_board[row][points[1]] == 0
+                    ):
+                temp = self.board[row][points[1]]
+                self.board[row][points[1]] = self.board[row][points[0]]
+                self.board[row][points[0]] = temp
+                break
+            
+            
+            # if(self.Fixed_board[row][col] != 0):
+            #     self.board[row][col] = randint(1,9)
+            #     break
+
+                
+
         self.update_fitness()
         return self
 
-    def choicenumber(self, r, c):
-        number = randint(1, self.size)
-        count = 0
-        while((self.is_row_duplicate(r, number) | self.is_column_duplicate(c, number) | self.is_Grid_duplicate(r, c, number)) and count < 9):
-            number = (number) % self.size+1
-            count += 1
-        return number
+    # def choicenumber(self, r, c):
+    #     number = randint(1, self.size)
+    #     count = 0
+    #     while((self.is_row_duplicate(r, number) | self.is_column_duplicate(c, number) | self.is_Grid_duplicate(r, c, number)) and count < 9):
+    #         number = (number) % self.size+1
+    #         count += 1
+    #     return number
 
-    def is_duplicate(self, r, c, number):
-        return  self.is_column_duplicate(c, number) | self.is_Grid_duplicate(r, c, number)
+    def is_duplicate(self, r, c, c2, number):
+        return self.is_column_duplicate(r,c,c2, number) | self.is_Grid_duplicate(r,c,r,c2,number)
 
     def mate(self, mate):
         children1 = []
         children2 = []
-        # typemate = randint(1, 2)
-        # if typemate == 1:
+
         for i in range(self.size):
             col = randint(0, self.size-1)
             children1.append(self.board[i][:col]+mate.board[i][col:])
             children2.append(mate.board[i][:col] + self.board[i][col:])
-        # else:
-        #     rows = randint(1, 8)
-        #     children1 = [row for row in self.board[:rows]] + \
-        #         [row for row in mate.board[rows:]]
-        #     children2 = [row for row in mate.board[:rows]] + \
-        #         [row for row in self.board[rows:]]
+
         return (Candidate(children1, self.Fixed_board), Candidate(children2, self.Fixed_board))
 
-    def calculate_num_occurrences_row(self):
+    def calculate_num_occurrences_row(self, row=-1):
         score = 0
-        for row in self.board:
+        if row == -1:
+            for row in self.board:
+                numbers = [0]*self.size
+                for col in row:
+                    numbers[col-1] = 1
+                score += sum(numbers)
+        else:
             numbers = [0]*self.size
-            for col in row:
-                numbers[col-1] = 1
+            for i in self.board[row]:
+                numbers[i-1] = 1
             score += sum(numbers)
-
         return score
 
-    def calculate_num_occurrences_col(self):
-        
-        score = 0
-        for i in range(self.size):
-            numbers = [0]*self.size
-            for j in range(self.size):
-                numbers[self.board[j][i]-1] = 1
-            score += sum(numbers)
+    def calculate_num_occurrences_col(self,col=-1):
 
+        score = 0
+        if col==-1:
+            for i in range(self.size):
+                numbers = [0]*self.size
+                for j in range(self.size):
+                    numbers[self.board[j][i]-1] = 1
+                score += sum(numbers)
+        else:
+            numbers = [0]*self.size
+            for i in range(self.size):
+                numbers[self.board[i][col]-1] = 1
+            score += sum(numbers)
         return score
 
     def calculate_num_occurrences_grid(self):
@@ -193,32 +223,35 @@ class Candidate:
                         number = number % self.size+1
                     self.board[i][j] = number
 
-    def is_Grid_duplicate(self, r, c, number):
-        
+    def is_Grid_duplicate(self, r, c, r2, c2, number):
+
         grid = int(self.size**0.5)
         rGrid = r//grid
         cGrid = c//grid
-        mine=False
         for row in range(grid):
             for col in range(grid):
-                if self.board[rGrid*grid+row][cGrid*grid+col] == number:
-                    if mine:
-                        return True
-                    mine=True
+                if (self.board[rGrid*grid+row][cGrid*grid+col] == number 
+                    and (rGrid*grid+row != r2 | cGrid*grid+col != c2)):
+                    return True
         return False
 
-    def is_column_duplicate(self, c, number):
-        mine=False
+    def is_column_duplicate(self, r,c,c2, number):
         for i in range(self.size):
-            if self.board[i][c] == number:
-                if mine:
-                        return True
-                mine=True
+            if self.board[i][c] == number and(i!=r | c!=c2):
+                return True
         return False
-
+    def get_row_duplicate(self, r):
+        list=[]
+        number=[0]*self.size
+        for i in self.board[r]:
+            number[i-1]=1
+        for i in range(self.size):
+            if number[i]==0:
+                list.append(i)
+        return list
     def is_row_duplicate(self, r, number):
         for ele in self.board[r]:
-            if number == ele:      
+            if number == ele:
                 return True
         return False
 
@@ -245,7 +278,11 @@ class Population:
         return best
 
     def selectParent(self):
-        return (self.tournamentSelection(), self.tournamentSelection())
+        parent1 = self.tournamentSelection()
+        parent2 = self.tournamentSelection()
+        while(parent1 == parent2):
+            parent2 = self.tournamentSelection()
+        return (parent1, parent2)
 
     def evolve(self):
         size = len(self.population)
@@ -273,17 +310,21 @@ class Population:
 
 
 if __name__ == "__main__":
-    maxGeneration = 100000
+    maxGeneration = 2000
     generateBoard = Generate_board(3)
-    candidate = generateBoard.createCandidate()
-    generateBoard.displayBoard(candidate.board)
-    pop = Population(generate_board=generateBoard, size=200,
-                     crossover=0.7, elitism=0.1, mutation=0.8, tournamentSize=10)
+    candidate1 = generateBoard.createCandidate()
+    candidate2 = generateBoard.createCandidate()
+    childrens=candidate1.mate(candidate2)
+    generateBoard.displayBoard(childrens[0].board)
+
+    pop = Population(generate_board=generateBoard, size=1000,
+                     crossover=0.4, elitism=0.05, mutation=0.8, tournamentSize=5)
     for i in range(maxGeneration):
         pop.evolve()
         if pop.population[0].fitness == 243:
             generateBoard.displayBoard(pop.population[0].board)
             break
+        if i ==100:
+            generateBoard.displayBoard(pop.population[0].board)
         print("Generation: "+str(i) + " Max Score: " +
-                  str(pop.population[0].fitness))
-    
+              str(pop.population[0].fitness))
