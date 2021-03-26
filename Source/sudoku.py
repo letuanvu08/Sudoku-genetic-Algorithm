@@ -3,6 +3,7 @@ import numpy as np
 import math
 from copy import deepcopy
 from functools import reduce
+from time import time, strftime, localtime
 EASY=6
 MEDIUM=5
 HARD=4
@@ -12,7 +13,7 @@ class Generate_board:
     _side = _sideGrid**2
     _goalBoard = []
 
-    def __init__(self, sideGrid,Level):
+    def __init__(self, sideGrid=3,Level=MEDIUM):
         Generate_board._sideGrid = sideGrid
         Generate_board._side = Generate_board._sideGrid**2
         self.level=Level
@@ -95,7 +96,7 @@ class Generate_board:
 
     def createCandidate(self):
         return Candidate(deepcopy(self.board_Puzzle),
-                         deepcopy(self.Fix_board))
+                         self.Fix_board)
 
 
 class Candidate:
@@ -107,24 +108,26 @@ class Candidate:
         self.fitness = self.update_fitness()
 
     def mutate(self):
-        
+        row = randint(0, self.size-1)
+        col = randint(0, self.size-1)
         while(True):
-            row = randint(0, self.size-1)
-            col = randint(0, self.size-1)
+            
             if(self.calculate_num_occurrences_row(row) < self.size):
                 number = randint(1, self.size)
                 list_dup=self.get_row_duplicate(row)
                 col=choice(list_dup)
                 while(self.is_row_duplicate(row, number) and self.Fixed_board[row][col] != 0):
                     number = number % self.size+1
-                    col = (col+1)%self.size
+                    col = choice(list_dup)
                 self.board[row][col] = number
                 break
             if (self.calculate_num_occurrences_col(col) < self.size):
                 number = randint(1, self.size)
+                list_dup=self.get_column_duplicate(col)
+                row=choice(list_dup)
                 while(self.is_column_duplicate(row,col,-1, number) and self.Fixed_board[row][col] != 0):
                     number = number % self.size+1
-                    row = randint(0, self.size-1)
+                    row=choice(list_dup)
                 self.board[row][col] = number
                 break
             points = sample(range(self.size), 2)
@@ -136,7 +139,8 @@ class Candidate:
                 self.board[row][points[1]] = self.board[row][points[0]]
                 self.board[row][points[0]] = temp
                 break
-            
+            row=(row+1)%self.size
+            col=(col+1)%self.size
             
             # if(self.Fixed_board[row][col] != 0):
             #     self.board[row][col] = randint(1,9)
@@ -167,7 +171,7 @@ class Candidate:
             children1.append(self.board[i][:col]+mate.board[i][col:])
             children2.append(mate.board[i][:col] + self.board[i][col:])
 
-        return (Candidate(children1, self.Fixed_board), Candidate(children2, self.Fixed_board))
+        return [Candidate(children1, self.Fixed_board),Candidate(children2, self.Fixed_board)]
 
     def calculate_num_occurrences_row(self, row=-1):
         score = 0
@@ -244,15 +248,24 @@ class Candidate:
             if self.board[i][c] == number and(i!=r | c!=c2):
                 return True
         return False
-    def get_row_duplicate(self, r):
-        list=[]
+    def get_column_duplicate(self,c):
+        list_dup=[]
         number=[0]*self.size
-        for i in self.board[r]:
-            number[i-1]=1
         for i in range(self.size):
-            if number[i]==0:
-                list.append(i)
-        return list
+            j=self.board[i][c]-1
+            number[j]+=1
+            if number[j]>1:
+                list_dup.append(i)
+        return list_dup
+    def get_row_duplicate(self, r):
+        list_dup=[]
+        number=[0]*self.size
+        for i in range(self.size):
+            j=self.board[r][i]-1
+            number[j]+=1
+            if number[j]>1:
+                list_dup.append(i)
+        return list_dup
     def is_row_duplicate(self, r, number):
         for ele in self.board[r]:
             if number == ele:
@@ -302,7 +315,7 @@ class Population:
                         buf.append(children.mutate())
                     else:
                         buf.append(children)
-                index += 2
+                index += len(childrens)
             else:
                 if random() <= self.mutation:
                     buf.append(self.population[index].mutate())
@@ -314,11 +327,12 @@ class Population:
 
 
 if __name__ == "__main__":
-    maxGeneration = 2000
-    generateBoard = Generate_board(3,EASY)
-
-    pop = Population(generate_board=generateBoard, size=10000,
-                     crossover=0.4, elitism=0.05, mutation=0.8, tournamentSize=5)
+    maxGeneration = 1000
+    generateBoard = Generate_board(3,HARD)
+    start=time()
+    pop = Population(generate_board=generateBoard, size=5000,
+                     crossover=0.5, elitism=0.05, mutation=0.8, tournamentSize=5)
+    
     for i in range(maxGeneration):
         pop.evolve()
         if pop.population[0].fitness == 243:
@@ -326,3 +340,5 @@ if __name__ == "__main__":
             break
         print("Generation: "+str(i) + " Max Score: " +
               str(pop.population[0].fitness))
+    end =time()
+    print("Time running: "+ str(int(end-start)))
