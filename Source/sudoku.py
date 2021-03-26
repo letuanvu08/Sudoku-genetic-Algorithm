@@ -3,26 +3,30 @@ import numpy as np
 import math
 from copy import deepcopy
 from functools import reduce
-
+EASY=6
+MEDIUM=5
+HARD=4
 
 class Generate_board:
     _sideGrid = 3
     _side = _sideGrid**2
     _goalBoard = []
 
-    def __init__(self, sideGrid):
+    def __init__(self, sideGrid,Level):
         Generate_board._sideGrid = sideGrid
         Generate_board._side = Generate_board._sideGrid**2
+        self.level=Level
         Generate_board._goalBoard = [
             [0 for i in range(Generate_board._side)]for j in range(Generate_board._side)]
         self.Generateboard()
         self.board_Puzzle = []
         self.Fix_board = []
         self.generate_board_Puzzle()
+        
         # print("Goal board:")
         # self.displayBoard(Generate_board._goalBoard)
-        # print("Puzzle board:")
-        # self.displayBoard(self.board_Puzzle)
+        print("Puzzle board:")
+        self.displayBoard(self.board_Puzzle)
 
     def pattern(self, r, c):
         return (Generate_board._sideGrid*(r % Generate_board._sideGrid)+r//Generate_board._sideGrid+c) % Generate_board._side
@@ -66,7 +70,7 @@ class Generate_board:
         self.Fix_board = [
             [1 for _ in range(Generate_board._side)]for _ in range(Generate_board._side)]
         squares = Generate_board._side*Generate_board._side
-        empties = squares * 3//4
+        empties = squares * 3//self.level
         for p in sample(range(squares), empties):
             self.board_Puzzle[p//Generate_board._side][p %
                                                        Generate_board._side] = 0
@@ -311,20 +315,14 @@ class Population:
 
 if __name__ == "__main__":
     maxGeneration = 2000
-    generateBoard = Generate_board(3)
-    candidate1 = generateBoard.createCandidate()
-    candidate2 = generateBoard.createCandidate()
-    childrens=candidate1.mate(candidate2)
-    generateBoard.displayBoard(childrens[0].board)
+    generateBoard = Generate_board(3,EASY)
 
-    pop = Population(generate_board=generateBoard, size=1000,
+    pop = Population(generate_board=generateBoard, size=10000,
                      crossover=0.4, elitism=0.05, mutation=0.8, tournamentSize=5)
     for i in range(maxGeneration):
         pop.evolve()
         if pop.population[0].fitness == 243:
             generateBoard.displayBoard(pop.population[0].board)
             break
-        if i ==100:
-            generateBoard.displayBoard(pop.population[0].board)
         print("Generation: "+str(i) + " Max Score: " +
               str(pop.population[0].fitness))
