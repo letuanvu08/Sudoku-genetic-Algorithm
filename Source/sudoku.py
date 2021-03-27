@@ -330,7 +330,7 @@ if __name__ == "__main__":
     maxGeneration = 1000
     generateBoard = Generate_board(3,HARD)
     start=time()
-    pop = Population(generate_board=generateBoard, size=5000,
+    pop = Population(generate_board=generateBoard, size=100000,
                      crossover=0.5, elitism=0.05, mutation=0.8, tournamentSize=5)
     
     for i in range(maxGeneration):
